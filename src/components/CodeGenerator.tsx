@@ -1,11 +1,9 @@
-import React from 'react'
 import { Experiment, analyzeExperiment } from '../lib/hpo-engine'
 
 export default function CodeGenerator({ exp }:{ exp: Experiment }){
   function genParamMapping(){
     // produce param dicts for sklearn/optuna
     const grid:any = {}
-    const rand:any = {}
     for (const p of exp.params){
       if (p.type.kind === 'categorical' || p.type.kind === 'discrete'){
         grid[p.name] = (p.type as any).values
@@ -50,7 +48,7 @@ export default function CodeGenerator({ exp }:{ exp: Experiment }){
   const analysis = analyzeExperiment(exp)
   const recommended = (analysis.recommendedMethod?.name || '').toLowerCase()
   // decide primary template
-  const primaryTemplate: 'optuna'|'grid'|'random'|'optuna_prune' = recommended.includes('bayesian') || recommended.includes('optuna') ? 'optuna' : recommended.includes('grid') ? 'grid' : 'optuna'
+  const primaryTemplate: 'optuna'|'grid' = recommended.includes('bayesian') || recommended.includes('optuna') ? 'optuna' : recommended.includes('grid') ? 'grid' : 'optuna'
 
   return (
     <div className="card mt-4">
@@ -60,9 +58,9 @@ export default function CodeGenerator({ exp }:{ exp: Experiment }){
         <pre className="bg-transparent p-3 border border-slate-800 rounded text-sm mt-2">{sampleGrid}</pre>
         <div className="mt-2 grid grid-cols-2 gap-2">
           <button className={`${primaryTemplate==='grid' ? 'px-3 py-2 bg-cyan text-navy rounded' : 'px-3 py-2 bg-slate-800 text-slate-300 rounded'}`} onClick={()=>navigator.clipboard.writeText(generateTemplate('grid'))}>Copy GridSearchCV</button>
-          <button className={`${primaryTemplate==='random' ? 'px-3 py-2 bg-cyan text-navy rounded' : 'px-3 py-2 bg-slate-800 text-slate-300 rounded'}`} onClick={()=>navigator.clipboard.writeText(generateTemplate('random'))}>Copy RandomizedSearchCV</button>
+          <button className="px-3 py-2 bg-slate-800 text-slate-300 rounded" onClick={()=>navigator.clipboard.writeText(generateTemplate('random'))}>Copy RandomizedSearchCV</button>
           <button className={`${primaryTemplate==='optuna' ? 'px-3 py-2 bg-cyan text-navy rounded' : 'px-3 py-2 bg-slate-800 text-slate-300 rounded'}`} onClick={()=>navigator.clipboard.writeText(generateTemplate('optuna'))}>Copy Optuna Template</button>
-          <button className={`${primaryTemplate==='optuna_prune' ? 'px-3 py-2 bg-cyan text-navy rounded' : 'px-3 py-2 bg-slate-800 text-slate-300 rounded'}`} onClick={()=>navigator.clipboard.writeText(generateTemplate('optuna_prune'))}>Copy Optuna Multi-Fidelity</button>
+          <button className="px-3 py-2 bg-slate-800 text-slate-300 rounded" onClick={()=>navigator.clipboard.writeText(generateTemplate('optuna_prune'))}>Copy Optuna Multi-Fidelity</button>
         </div>
         <div className="mt-2 text-sm text-slate-400">All templates include editable placeholders and comments.</div>
       </div>

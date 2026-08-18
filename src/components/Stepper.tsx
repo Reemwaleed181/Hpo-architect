@@ -1,5 +1,3 @@
-import React from 'react'
-
 export default function Stepper({ steps, active, onSelect }:{ steps:string[], active:number, onSelect:(i:number)=>void }){
   return (
     <div className="w-full mx-auto max-w-4xl">

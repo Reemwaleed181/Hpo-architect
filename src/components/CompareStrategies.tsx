@@ -1,4 +1,3 @@
-import React from 'react'
 import { MethodAnalysis } from '../lib/hpo-engine'
 
 export default function CompareStrategies({ methods }:{ methods: MethodAnalysis[] }){

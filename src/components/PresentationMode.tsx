@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Experiment, AnalysisResult } from '../lib/hpo-engine'
 
 export default function PresentationMode({ exp, analysis, onExit }:{ exp: Experiment, analysis: AnalysisResult, onExit: ()=>void }){

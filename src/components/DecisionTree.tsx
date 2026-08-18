@@ -1,7 +1,7 @@
 import React from 'react'
-import { Experiment, calculateGridSize, analyzeExperiment, AnalysisResult } from '../lib/hpo-engine'
+import { Experiment, AnalysisResult } from '../lib/hpo-engine'
 
-export default function DecisionTree({ exp, analysis }:{ exp: Experiment, analysis?: AnalysisResult }){
+export default function DecisionTree({ analysis }:{ exp: Experiment, analysis?: AnalysisResult }){
   const analysisLocal = analysis || null
   const selected = analysisLocal?.recommendedMethod?.name || null
   const nodes = ['Grid Search','Random Search','Bayesian Optimization','Hyperband','ASHA']

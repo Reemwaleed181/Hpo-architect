@@ -1,5 +1,3 @@
-import React from 'react'
-
 export default function Navbar({ onNew, onPresent }:{onNew?:()=>void, onPresent?:()=>void}){
   return (
     <div className="flex items-center justify-between p-4 border-b border-slate-800">

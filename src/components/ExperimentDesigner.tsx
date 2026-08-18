@@ -1,8 +1,7 @@
 import React, { useState } from 'react'
-import { Experiment, TaskType, ModelFamily } from '../lib/hpo-engine'
+import { Experiment, TaskType } from '../lib/hpo-engine'
 import SectionHeader from './ui/SectionHeader'
 import Card from './ui/Card'
-import { Button } from './ui/Button'
 
 export default function ExperimentDesigner({ value, onChange }:{ value: Experiment, onChange:(v:Experiment)=>void }){
   const [local, setLocal] = useState(value)

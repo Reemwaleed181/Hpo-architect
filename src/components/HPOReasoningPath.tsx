@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Experiment, analyzeExperiment, AnalysisResult } from '../lib/hpo-engine'
 
 export default function HPOReasoningPath({ exp, analysis }:{ exp: Experiment, analysis?: AnalysisResult }){

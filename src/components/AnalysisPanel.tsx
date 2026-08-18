@@ -1,5 +1,4 @@
-import React from 'react'
-import { calculateGridSize, humanReadableCount, calculateGridCost, estimateAffordableTrials, analyzeSearchSpace, recommendValidation, budgetSummary, Experiment, analyzeExperiment, AnalysisResult } from '../lib/hpo-engine'
+import { humanReadableCount, calculateGridCost, Experiment, analyzeExperiment, AnalysisResult } from '../lib/hpo-engine'
 import { formatMinutes } from '../utils/time'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts'
 
@@ -10,8 +9,6 @@ export default function AnalysisPanel({ exp, analysis }:{ exp: Experiment, analy
   const recs = analysisLocal.rankedMethods
   const validation = analysisLocal.validation
   const affordable = analysisLocal.affordableFullTrials
-  const budget = analysisLocal.budgetSummary
-
   return (
     <div className="card mt-4">
       <h3 className="text-lg font-semibold">Analysis</h3>

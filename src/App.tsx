@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Navbar from './components/Navbar'
 import PresentationMode from './components/PresentationMode'
 import LearnSection from './components/LearnSection'

@@ -1,5 +1,3 @@
-import React from 'react'
-
 export default function LearnSection(){
   const cards = [
     {t:'What is a Parameter?', d:'Learned by the model during training.'},

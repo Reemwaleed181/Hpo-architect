@@ -1,14 +1,9 @@
-import React from 'react'
 import { Hyperparam } from '../lib/hpo-engine'
-import Badge from './ui/Badge'
 import Card from './ui/Card'
 
 export default function SearchSpaceBuilder({ params, onChange }:{ params: Hyperparam[], onChange:(p:Hyperparam[])=>void }){
   function addParam(){
     onChange([...params, { name: `param_${params.length+1}`, type: { kind: 'categorical', values: ['option1','option2'] }, gridPoints: null }])
-  }
-  function update(i:number, p:Hyperparam){
-    const copy = params.slice(); copy[i]=p; onChange(copy)
   }
   function remove(i:number){ const copy = params.slice(); copy.splice(i,1); onChange(copy) }
 
@@ -50,7 +45,6 @@ export default function SearchSpaceBuilder({ params, onChange }:{ params: Hyperp
               <div>
                 <div className="flex items-center gap-3">
                   <div className="font-medium text-lg">{p.name}</div>
-                  <Badge />
                 </div>
                 <div className="text-sm text-slate-400 mt-1">{p.type.kind.toUpperCase()}</div>
               </div>

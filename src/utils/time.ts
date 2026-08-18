@@ -13,9 +13,3 @@ export function formatMinutes(minutes: number): string {
   const hours = Math.floor(rem / 60)
   return `${days} d${hours ? ` ${hours} h` : ''}`
 }
-
-export function formatMinutesWithMinutesDetail(minutes: number): string {
-  // e.g. show both human readable and exact minutes in parentheses when useful
-  const human = formatMinutes(minutes)
-  return `${human}`
-}

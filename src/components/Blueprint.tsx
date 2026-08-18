@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Experiment, calculateGridSize, humanReadableCount, analyzeExperiment, AnalysisResult } from '../lib/hpo-engine'
+import { useState } from 'react'
+import { Experiment, humanReadableCount, analyzeExperiment, AnalysisResult } from '../lib/hpo-engine'
 import { downloadAsFile, toYAML } from '../utils/export'
 import Card from './ui/Card'
 import { Button } from './ui/Button'
