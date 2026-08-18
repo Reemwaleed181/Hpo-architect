@@ -1,5 +1,7 @@
 import React from 'react'
 import { Hyperparam } from '../lib/hpo-engine'
+import Badge from './ui/Badge'
+import Card from './ui/Card'
 
 export default function SearchSpaceBuilder({ params, onChange }:{ params: Hyperparam[], onChange:(p:Hyperparam[])=>void }){
   function addParam(){
@@ -21,79 +23,65 @@ export default function SearchSpaceBuilder({ params, onChange }:{ params: Hyperp
     return p.type.kind === 'integer' && ((p.type as any).min >= (p.type as any).max)
   }
 
+  const counts = params.reduce((acc, p)=>{
+    acc.total++
+    if (p.conditionalOn) acc.conditional++
+    if (p.type.kind === 'continuous') acc.continuous++
+    if (p.type.kind === 'integer') acc.integer++
+    if (p.type.kind === 'categorical' || p.type.kind === 'discrete') acc.categorical++
+    return acc
+  }, { total:0, continuous:0, integer:0, categorical:0, conditional:0 })
+
   return (
-    <div className="card mt-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Search Space Builder</h3>
-        <div className="text-sm text-slate-400">Dimensions: {params.length}</div>
+    <Card className="mt-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Search Space</h3>
+        <div className="flex gap-3 text-sm text-slate-400">
+          <div>Dimensions <strong className="text-white">{counts.total}</strong></div>
+          <div>Continuous <strong className="text-white">{counts.continuous}</strong></div>
+          <div>Categorical <strong className="text-white">{counts.categorical}</strong></div>
+          <div>Conditional <strong className="text-white">{counts.conditional}</strong></div>
+        </div>
       </div>
       <div className="mt-3 space-y-3">
         {params.map((p, i)=> (
           <div key={i} className="p-3 border border-slate-800 rounded">
-            <div className="flex justify-between">
-              <input className="w-1/2 bg-transparent border-b border-slate-700 mb-2 p-1" value={p.name} onChange={e=>update(i,{...p,name:e.target.value})} />
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="flex items-center gap-3">
+                  <div className="font-medium text-lg">{p.name}</div>
+                  <Badge />
+                </div>
+                <div className="text-sm text-slate-400 mt-1">{p.type.kind.toUpperCase()}</div>
+              </div>
               <div className="flex gap-2">
                 <button className="px-2 py-1 bg-slate-700 rounded text-sm" onClick={()=>duplicate(i)}>Duplicate</button>
                 <button className="px-2 py-1 bg-slate-700 rounded text-sm" onClick={()=>remove(i)}>Remove</button>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              <label className="flex flex-col">
-                Type
-                <select value={p.type.kind} onChange={e=>{
-                  const kind = e.target.value as any
-                  if (kind==='continuous') update(i,{...p, type:{kind:'continuous', min:0.001, max:0.1, scale:'log'}, gridPoints: null})
-                  else if (kind==='integer') update(i,{...p, type:{kind:'integer', min:1, max:10, step:1}, gridPoints: null})
-                  else if (kind==='discrete') update(i,{...p, type:{kind:'discrete', values:['a','b']}, gridPoints: null})
-                  else update(i,{...p, type:{kind:'categorical', values:['a','b']}, gridPoints: null})
-                }} className="mt-1 bg-transparent border border-slate-700 p-1 rounded">
-                  <option value="continuous">Continuous</option>
-                  <option value="integer">Integer</option>
-                  <option value="discrete">Discrete</option>
-                  <option value="categorical">Categorical</option>
-                </select>
-              </label>
-
-              <label className="flex flex-col">
-                Sampling scale
-                <select value={(p.type as any).scale || 'linear'} onChange={e=>{
-                  const t = { ...(p.type as any), scale: e.target.value }
-                  update(i,{...p, type: t})
-                }} className="mt-1 bg-transparent border border-slate-700 p-1 rounded">
-                  <option value="linear">Linear</option>
-                  <option value="log">Logarithmic</option>
-                </select>
-              </label>
-
-              <label className="flex flex-col">
-                Grid points (optional)
-                <input type="number" className="mt-1 bg-transparent border border-slate-700 p-1 rounded" value={p.gridPoints ?? ''} onChange={e=>{ const v = e.target.value? Number(e.target.value): null; update(i,{...p, gridPoints:v}) }} />
-              </label>
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2">
+              <div>
+                <div className="text-xs text-slate-400">Type</div>
+                <div className="mt-1 text-sm">{p.type.kind}</div>
+              </div>
+              <div>
+                <div className="text-xs text-slate-400">Sampling</div>
+                <div className="mt-1 text-sm">{(p.type as any).scale || 'linear'}</div>
+              </div>
+              <div>
+                <div className="text-xs text-slate-400">Grid discretization</div>
+                <div className="mt-1 text-sm">{p.gridPoints? String(p.gridPoints): 'Not defined'}</div>
+              </div>
             </div>
 
-            <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
+            <div className="mt-3">
               {p.type.kind === 'continuous' && (
-                <>
-                  <label className="flex flex-col">Min<input className="mt-1 bg-transparent border border-slate-700 p-1 rounded" type="number" value={(p.type as any).min} onChange={e=>{ const t = {...(p.type as any), min: Number(e.target.value)}; update(i,{...p, type:t}) }} /></label>
-                  <label className="flex flex-col">Max<input className="mt-1 bg-transparent border border-slate-700 p-1 rounded" type="number" value={(p.type as any).max} onChange={e=>{ const t = {...(p.type as any), max: Number(e.target.value)}; update(i,{...p, type:t}) }} /></label>
-                  <label className="flex flex-col">Conditional (name=value)<input className="mt-1 bg-transparent border border-slate-700 p-1 rounded" value={p.conditionalOn? `${p.conditionalOn.name}=${p.conditionalOn.value}`:''} onChange={e=>{ const v = e.target.value; const c = v.includes('=')? {name:v.split('=')[0], value:v.split('=')[1]}: undefined; update(i,{...p, conditionalOn: c as any}) }} /></label>
-                </>
+                <div className="text-sm">
+                  <div>Range: {(p.type as any).min} — {(p.type as any).max}</div>
+                </div>
               )}
-
-              {p.type.kind === 'integer' && (
-                <>
-                  <label className="flex flex-col">Min<input className="mt-1 bg-transparent border border-slate-700 p-1 rounded" type="number" value={(p.type as any).min} onChange={e=>{ const t = {...(p.type as any), min: Number(e.target.value)}; update(i,{...p, type:t}) }} /></label>
-                  <label className="flex flex-col">Max<input className="mt-1 bg-transparent border border-slate-700 p-1 rounded" type="number" value={(p.type as any).max} onChange={e=>{ const t = {...(p.type as any), max: Number(e.target.value)}; update(i,{...p, type:t}) }} /></label>
-                  <label className="flex flex-col">Step<input className="mt-1 bg-transparent border border-slate-700 p-1 rounded" type="number" value={(p.type as any).step ?? 1} onChange={e=>{ const t = {...(p.type as any), step: Number(e.target.value)}; update(i,{...p, type:t}) }} /></label>
-                </>
-              )}
-
-              {(p.type.kind === 'categorical' || p.type.kind === 'discrete') && (
-                <>
-                  <label className="flex flex-col col-span-3">Values (comma-separated)<input className="mt-1 bg-transparent border border-slate-700 p-1 rounded" value={(p.type as any).values.join(',')} onChange={e=>{ const vals = e.target.value.split(',').map(s=>s.trim()).filter(Boolean); const t = {...(p.type as any), values: vals}; update(i,{...p, type:t}) }} /></label>
-                </>
-              )}
+              {p.conditionalOn && (<div className="mt-2 text-sm text-slate-400">↳ active when {p.conditionalOn.name} = {p.conditionalOn.value}</div>)}
             </div>
 
             <div className="mt-2 text-xs text-slate-400">
@@ -107,6 +95,6 @@ export default function SearchSpaceBuilder({ params, onChange }:{ params: Hyperp
           <button className="px-3 py-2 bg-cyan text-navy rounded" onClick={addParam}>Add Hyperparameter</button>
         </div>
       </div>
-    </div>
+    </Card>
   )
 }

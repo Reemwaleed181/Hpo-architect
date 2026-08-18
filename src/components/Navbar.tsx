@@ -1,6 +1,6 @@
 import React from 'react'
 
-export default function Navbar({ onNew }:{onNew?:()=>void}){
+export default function Navbar({ onNew, onPresent }:{onNew?:()=>void, onPresent?:()=>void}){
   return (
     <div className="flex items-center justify-between p-4 border-b border-slate-800">
       <div className="flex items-center gap-3">
@@ -12,6 +12,7 @@ export default function Navbar({ onNew }:{onNew?:()=>void}){
       </div>
       <div className="flex items-center gap-3">
         <button className="px-3 py-1 bg-accent text-navy rounded-md text-sm" onClick={onNew}>Design My HPO Experiment</button>
+        <button className="px-3 py-1 bg-slate-800 text-slate-200 rounded-md text-sm" onClick={onPresent}>Presentation</button>
       </div>
     </div>
   )

@@ -15,49 +15,63 @@ export default function AnalysisPanel({ exp, analysis }:{ exp: Experiment, analy
   return (
     <div className="card mt-4">
       <h3 className="text-lg font-semibold">Analysis</h3>
-      <div className="mt-3 grid grid-cols-2 gap-4">
-        <div className="p-3 border border-slate-800 rounded">
-          <div className="text-sm text-slate-400">Dataset</div>
-          <div className="mt-2">Size: {exp.samples} ({/* compute label */})</div>
-          <div className="mt-1 text-sm text-slate-400">Objective: {exp.metric}</div>
+      <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div>
+          <div className="text-xs font-semibold uppercase text-slate-400">Full trial</div>
+          <div className="mt-1 text-2xl font-semibold">{exp.trialTimeMinutes} min</div>
         </div>
-
-        <div className="p-3 border border-slate-800 rounded">
-          <div className="text-sm text-slate-400">Compute</div>
-          <div className="mt-2">Trial time: {exp.trialTimeMinutes} minutes</div>
-          <div>Available budget: {exp.budgetMinutes} minutes</div>
-          <div>Workers: {exp.workers}</div>
-          <div className="mt-2 text-sm text-slate-400">Affordable full trials: {affordable}</div>
-          {budget.gridCalc && (
-            <div className="mt-2 text-sm text-amber-300">Grid serial estimate: {formatMinutes(budget.gridCalc.serialMinutes)} — Budget ratio: {(budget.gridCalc.budgetRatio).toFixed(1)}×</div>
-          )}
+        <div>
+          <div className="text-xs font-semibold uppercase text-slate-400">Total budget</div>
+          <div className="mt-1 text-2xl font-semibold">{Math.floor(exp.budgetMinutes/60)} h</div>
+        </div>
+        <div>
+          <div className="text-xs font-semibold uppercase text-slate-400">Affordable full trials</div>
+          <div className="mt-1 text-2xl font-semibold">{affordable}</div>
+        </div>
+        <div>
+          <div className="text-xs font-semibold uppercase text-slate-400">Workers</div>
+          <div className="mt-1 text-2xl font-semibold">{exp.workers}</div>
         </div>
       </div>
 
-      <div className="mt-4">
-        <h4 className="font-semibold">Grid Search Estimation</h4>
-          {analysisLocal.gridInfo.exactGridSizeAvailable ? (
-            <div>
-              {grid.finite ? (
-                <div>
-                  <div>Trials: {humanReadableCount(grid.size)}</div>
-                  {grid.size > 0n && (
-                    (()=>{ const cost = calculateGridCost(grid.size, exp.trialTimeMinutes, exp.workers); return (
-                      <div className="mt-2 text-sm text-slate-400">
-                          Estimated serial compute: {formatMinutes(cost.serialMinutes)} ({cost.serialMinutes.toLocaleString()} minutes)
-                          <br/>Idealized parallel wall time (assuming perfect parallel utilization): {formatMinutes(cost.idealParallelMinutes)}
-                          <br/>Budget ratio: {(cost.serialMinutes/Math.max(1, exp.budgetMinutes)).toFixed(1)}×
-                        </div>
-                    ) })()
-                  )}
-                </div>
-              ) : (
-                <div className="text-sm text-slate-400">Continuous dimensions require discretization before an exhaustive grid size can be calculated.</div>
-              )}
+      <div className="mt-5 grid grid-cols-1 gap-5 border-t border-slate-800 pt-4 md:grid-cols-2">
+        <section>
+          <h4 className="text-sm font-semibold uppercase">Grid feasibility</h4>
+          {analysisLocal.gridInfo.exactGridSizeAvailable && grid.finite ? (
+            <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <div className="text-sm text-slate-400">Grid configurations</div>
+                <div className="text-xl font-semibold">{humanReadableCount(grid.size)}</div>
+                {grid.size > 0n && (()=>{ const cost = calculateGridCost(grid.size, exp.trialTimeMinutes, exp.workers); return (
+                  <div className="mt-2 text-sm text-slate-400">Serial compute: {formatMinutes(cost.serialMinutes)} — Idealized parallel: {formatMinutes(cost.idealParallelMinutes)}</div>
+                ) })()}
+              </div>
+              <div>
+                <div className="text-sm text-slate-400">Available budget</div>
+                <div className="text-xl font-semibold">{formatMinutes(exp.budgetMinutes)}</div>
+                <div className="mt-2 text-sm text-slate-400">Grid / Budget: {(Number(grid.size) * exp.trialTimeMinutes / Math.max(1, exp.budgetMinutes)).toFixed(1)}×</div>
+              </div>
             </div>
           ) : (
-            <div className="text-sm text-amber-300">Exact exhaustive Grid Search size is not calculated for conditional search spaces because only valid conditional configurations should be counted.</div>
+            <div className="mt-2 border-l-2 border-amber-400 pl-3">
+              <div className="font-medium text-amber-200">Exact grid cost unavailable</div>
+              <div className="mt-1 text-sm text-slate-300">
+                {grid.conditional
+                  ? 'Conditional parameters require counting only valid configurations before an exhaustive Grid Search size can be calculated.'
+                  : 'Continuous dimensions are not discretized, so an exact exhaustive Grid Search size cannot be calculated.'}
+              </div>
+            </div>
           )}
+        </section>
+
+        <section>
+          <h4 className="text-sm font-semibold uppercase">Search space diagnostics</h4>
+          {diags.length===0 ? <div className="mt-2 text-sm text-slate-400">No immediate issues detected.</div> : (
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-300">
+              {diags.map((d,i)=>(<li key={i}>{d}</li>))}
+            </ul>
+          )}
+        </section>
       </div>
 
       {grid.finite && grid.size > 0n && (
@@ -87,25 +101,17 @@ export default function AnalysisPanel({ exp, analysis }:{ exp: Experiment, analy
         </div>
       )}
 
-      <div className="mt-4">
-        <h4 className="font-semibold">Search Space Diagnostics</h4>
-        {diags.length===0 ? <div className="text-sm text-slate-400">No immediate issues detected.</div> : (
-          <ul className="list-disc pl-6 mt-2 text-sm text-slate-300">
-            {diags.map((d,i)=>(<li key={i}>{d}</li>))}
-          </ul>
-        )}
-      </div>
-
-      <div className="mt-4">
-        <h4 className="font-semibold">HPO Strategy Recommendations</h4>
-        <div className="mt-2 grid gap-2">
-          {recs.map(r=> (
-            <div key={r.name} className="p-3 border border-slate-800 rounded">
+      <div className="mt-5 border-t border-slate-800 pt-4">
+        <h4 className="text-sm font-semibold uppercase">HPO strategy recommendations</h4>
+        <div className="mt-2 grid gap-x-6 md:grid-cols-2">
+          {recs.map((r, index)=> (
+            <div key={r.name} className={`border-t border-slate-800 py-3 ${index===0 ? 'border-l-2 border-l-cyan-400 pl-3' : ''}`}>
               <div className="flex justify-between"><div className="font-medium">{r.name}</div><div className="text-sm text-slate-400">{r.suitability}</div></div>
-              <div className="mt-1 text-sm text-slate-400">Why it fits:</div>
-              <ul className="list-disc pl-6 text-sm">
-                {r.whyFits.map((w,i)=>(<li key={i}>{w}</li>))}
-              </ul>
+              {r.whyFits.length>0 && (
+                <ul className="mt-1 list-disc pl-5 text-sm text-slate-300">
+                  {r.whyFits.map((w,i)=>(<li key={i}>{w}</li>))}
+                </ul>
+              )}
               {r.whyNot && r.whyNot.length>0 && (
                 <details className="mt-2 text-sm"><summary className="text-amber-200">Why not this method?</summary><ul className="list-disc pl-6 mt-2 text-sm text-slate-300">{r.whyNot.map((n,i)=>(<li key={i}>{n}</li>))}</ul></details>
               )}
@@ -114,11 +120,17 @@ export default function AnalysisPanel({ exp, analysis }:{ exp: Experiment, analy
         </div>
       </div>
 
-      <div className="mt-4">
-        <h4 className="font-semibold">Validation Recommendation</h4>
-        <div className="mt-2 p-3 border border-slate-800 rounded">
-          <div className="font-medium">{validation.method}</div>
-          <div className="text-sm text-slate-400">{validation.reason}</div>
+      <div className="mt-5 border-t border-slate-800 pt-4">
+        <h4 className="text-sm font-semibold uppercase">Validation advisor</h4>
+        <div className="mt-2 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <div className="font-medium">{validation.method}</div>
+            <div className="mt-1 text-sm text-slate-400">{validation.reason}</div>
+          </div>
+          <div className="border-l-2 border-slate-700 pl-3">
+            <div className="text-xs font-semibold uppercase text-slate-400">Final test set</div>
+            <div className="mt-1 text-sm text-slate-300">Reserve it for final reporting after model selection.</div>
+          </div>
         </div>
       </div>
     </div>
