@@ -1,0 +1,22 @@
+Copy the contents of this folder into your existing project:
+D:\Master\ML summer\HPO_
+
+Choose Replace for matching files.
+
+This patch does NOT include or modify:
+- .git
+- .vercel
+- node_modules
+- dist
+- package.json / package-lock.json
+- Vercel/GitHub configuration
+
+After copying, run:
+npm run build
+npm run preview
+
+Expected preset results:
+- Small Random Forest -> Grid Search (Strong Match)
+- Expensive XGBoost -> Bayesian Optimization (Strong Match)
+- Deep Neural Network -> Bayesian Optimization (Strong Match)
+  with Hyperband / ASHA / Bayesian + Multi-Fidelity / BOHB as Reasonable Match alternatives.

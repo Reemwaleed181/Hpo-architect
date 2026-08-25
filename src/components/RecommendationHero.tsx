@@ -1,4 +1,5 @@
 import { MethodAnalysis } from '../lib/hpo-engine'
+import ScientificEvidence from './ScientificEvidence'
 
 export default function RecommendationHero({ main }: { main: MethodAnalysis }){
   return (
@@ -6,6 +7,7 @@ export default function RecommendationHero({ main }: { main: MethodAnalysis }){
       <div className="text-sm text-slate-400">HPO ARCHITECT RECOMMENDS</div>
       <div className="mt-2 text-4xl font-bold">{main.name}</div>
       <div className="mt-2 text-cyan-200 font-semibold text-lg">{main.suitability}</div>
+      <div className="mt-1 text-xs text-slate-500">Strong / Reasonable / Weak are author-developed qualitative applicability labels based on literature-supported conditions; they are not probabilities, accuracy estimates, or performance scores.</div>
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <div className="font-medium">Why this fits</div>
@@ -22,6 +24,7 @@ export default function RecommendationHero({ main }: { main: MethodAnalysis }){
           </div>
         )}
       </div>
+      <ScientificEvidence referenceIds={main.referenceIds} />
     </div>
   )
 }

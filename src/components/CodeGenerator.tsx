@@ -1,68 +1,96 @@
 import { Experiment, analyzeExperiment } from '../lib/hpo-engine'
 
+function pyList(values: string[]){
+  return `[${values.map(v=>JSON.stringify(v)).join(', ')}]`
+}
+
 export default function CodeGenerator({ exp }:{ exp: Experiment }){
-  function genParamMapping(){
-    // produce param dicts for sklearn/optuna
-    const grid:any = {}
+  function gridLines(){
+    const lines:string[] = []
     for (const p of exp.params){
-      if (p.type.kind === 'categorical' || p.type.kind === 'discrete'){
-        grid[p.name] = (p.type as any).values
-      } else if (p.type.kind === 'integer'){
-        const t = p.type as any
-        grid[p.name] = Array.from({length: Math.floor((t.max - t.min)/(t.step||1))+1}, (_,i)=>t.min + (t.step||1)*i)
-      } else if (p.type.kind === 'continuous'){
-        const t = p.type as any
-        grid[p.name] = `continuous(${t.min}, ${t.max}, scale='${t.scale||'linear'}')`
+      if (p.type.kind === 'categorical' || p.type.kind === 'discrete') {
+        lines.push(`    '${p.name}': ${pyList(p.type.values)},`)
+      } else if (p.type.kind === 'integer') {
+        const step = p.type.step || 1
+        lines.push(`    '${p.name}': list(range(${p.type.min}, ${p.type.max + step}, ${step})),`)
+      } else {
+        if (p.gridPoints && p.gridPoints > 0) {
+          const fn = p.type.scale === 'log' ? 'np.geomspace' : 'np.linspace'
+          lines.push(`    '${p.name}': ${fn}(${p.type.min}, ${p.type.max}, ${Math.floor(p.gridPoints)}).tolist(),`)
+        } else {
+          lines.push(`    '${p.name}': [...],  # REQUIRED: provide explicit finite candidate values for Grid Search`)
+        }
       }
     }
-    return { grid }
+    return lines.join('\n')
+  }
+
+  function randomLines(){
+    const lines:string[] = []
+    for (const p of exp.params){
+      if (p.type.kind === 'categorical' || p.type.kind === 'discrete') {
+        lines.push(`    '${p.name}': ${pyList(p.type.values)},`)
+      } else if (p.type.kind === 'integer') {
+        lines.push(`    '${p.name}': randint(${p.type.min}, ${p.type.max + 1}),`)
+      } else if (p.type.scale === 'log') {
+        lines.push(`    '${p.name}': loguniform(${p.type.min}, ${p.type.max}),`)
+      } else {
+        lines.push(`    '${p.name}': uniform(loc=${p.type.min}, scale=${p.type.max - p.type.min}),`)
+      }
+    }
+    return lines.join('\n')
+  }
+
+  function optunaLines(){
+    return exp.params.map(p=>{
+      if (p.type.kind==='continuous') return `    ${p.name} = trial.suggest_float('${p.name}', ${p.type.min}, ${p.type.max}, log=${p.type.scale==='log' ? 'True' : 'False'})`
+      if (p.type.kind==='integer') return `    ${p.name} = trial.suggest_int('${p.name}', ${p.type.min}, ${p.type.max}, step=${p.type.step || 1})`
+      return `    ${p.name} = trial.suggest_categorical('${p.name}', ${pyList(p.type.values)})`
+    }).join('\n')
+  }
+
+  function metricDirection(){
+    const m = String(exp.metric || '').toLowerCase()
+    if (m.includes('rmse') || m.includes('mae') || m.includes('log loss') || m.includes('logloss')) return 'minimize'
+    return 'maximize'
   }
 
   function generateTemplate(kind:'grid'|'random'|'optuna'|'halving'|'optuna_prune'){
-    const { grid } = genParamMapping()
     if (kind === 'grid'){
-      return `# GridSearchCV starter\nfrom sklearn.model_selection import GridSearchCV\n# Replace with your estimator and data\nparam_grid = ${JSON.stringify(grid, null, 2)}\n# estimator = ...\n# grid = GridSearchCV(estimator, param_grid, scoring='${exp.metric}', cv=3)\n# grid.fit(X_train, y_train)\n`}
+      return `# GridSearchCV starter\n# Scientific basis: Feurer & Hutter (2019); Bischl et al. (2023)\nimport numpy as np\nfrom sklearn.model_selection import GridSearchCV\n\nparam_grid = {\n${gridLines()}\n}\n\n# estimator = ...\n# cv_splitter = ...  # choose a validation scheme appropriate to the data\n# search = GridSearchCV(estimator, param_grid, scoring='${exp.metric}', cv=cv_splitter)\n# search.fit(X_train, y_train)\n`
+    }
     if (kind === 'random'){
-      return `# RandomizedSearchCV starter\nfrom sklearn.model_selection import RandomizedSearchCV\nfrom scipy.stats import uniform\n# Replace with your estimator and data\nparam_dist = ${JSON.stringify(grid, null, 2)}\n# estimator = ...\n# rand = RandomizedSearchCV(estimator, param_distributions=param_dist, n_iter=50, scoring='${exp.metric}', cv=3)\n# rand.fit(X_train, y_train)\n`}
+      return `# RandomizedSearchCV starter\n# Scientific basis: Bergstra & Bengio (2012)\nfrom scipy.stats import uniform, loguniform, randint\nfrom sklearn.model_selection import RandomizedSearchCV\n\nparam_dist = {\n${randomLines()}\n}\n\n# estimator = ...\n# cv_splitter = ...\n# n_iter = ...  # derive from your declared compute budget; no arbitrary default is imposed\n# search = RandomizedSearchCV(estimator, param_distributions=param_dist, n_iter=n_iter, scoring='${exp.metric}', cv=cv_splitter)\n# search.fit(X_train, y_train)\n`
+    }
     if (kind === 'optuna'){
-        const metric = String(exp.metric || '').toLowerCase()
-        const direction = /rmse|mse|mae|error/.test(metric) ? 'minimize' : 'maximize'
-        return `# Optuna starter\nimport optuna\n# Define objective that returns validation metric\ndef objective(trial):\n    # Replace with model creation and data\n    # Suggest hyperparameters:\n${exp.params.map(p=>{
-        if (p.type.kind==='continuous') return `    ${p.name} = trial.suggest_float('${p.name}', ${(p.type as any).min}, ${(p.type as any).max}, log=${(p.type as any).scale==='log'})`
-        if (p.type.kind==='integer') return `    ${p.name} = trial.suggest_int('${p.name}', ${(p.type as any).min}, ${(p.type as any).max})`
-        return `    ${p.name} = trial.suggest_categorical('${p.name}', ${(p.type as any).values})`
-      }).join('\n')}
-    # Train and return validation metric\n    return 0.0  # Replace with actual metric
-      study = optuna.create_study(direction='${direction}')\nstudy.optimize(objective, n_trials=50)\n`}
+      return `# Optuna model-based HPO starter\n# Scientific basis for Bayesian/model-based HPO: Snoek et al. (2012); Shahriari et al. (2016)\nimport optuna\n\ndef objective(trial):\n${optunaLines()}\n    # Build/train your model and return the VALIDATION metric here.\n    raise NotImplementedError('Return the validation metric for this experiment')\n\nstudy = optuna.create_study(direction='${metricDirection()}')\n# n_trials = ...  # derive from your experiment budget / stopping policy\n# study.optimize(objective, n_trials=n_trials)\n`
+    }
     if (kind === 'halving'){
-      return `# Successive Halving example using sklearn\nfrom sklearn.experimental import enable_halving_search_cv\nfrom sklearn.model_selection import HalvingGridSearchCV\nparam_grid = ${JSON.stringify(grid, null, 2)}\n# estimator = ...\n# search = HalvingGridSearchCV(estimator, param_grid, cv=3, factor=3)\n# search.fit(X_train, y_train)\n`}
+      return `# Successive Halving starter\n# Scientific basis: Jamieson & Talwalkar (2016)\nfrom sklearn.experimental import enable_halving_search_cv  # noqa: F401\nfrom sklearn.model_selection import HalvingGridSearchCV\n\nparam_grid = {\n${gridLines()}\n}\n\n# estimator = ...\n# cv_splitter = ...\n# reduction_factor = ...  # choose explicitly for the experiment; no arbitrary default is imposed\n# search = HalvingGridSearchCV(estimator, param_grid, cv=cv_splitter, factor=reduction_factor)\n# search.fit(X_train, y_train)\n`
+    }
     if (kind === 'optuna_prune'){
-        const metric = String(exp.metric || '').toLowerCase()
-        const direction = /rmse|mse|mae|error/.test(metric) ? 'minimize' : 'maximize'
-        return `# Optuna with pruning example\nimport optuna\nfrom optuna.pruners import SuccessiveHalvingPruner\npruner = SuccessiveHalvingPruner()\nstudy = optuna.create_study(pruner=pruner, direction='${direction}')\n# Define objective with intermediate reporting to enable pruning\ndef objective(trial):\n    # report intermediate values with trial.report(value, step) and raise TrialPruned when appropriate\    return 0.0\nstudy.optimize(objective, n_trials=50)\n`}
+      return `# Multi-fidelity / pruning starter\n# Scientific basis: Jamieson & Talwalkar (2016); Li et al. (2018)\nimport optuna\nfrom optuna.pruners import SuccessiveHalvingPruner\n\npruner = SuccessiveHalvingPruner()\nstudy = optuna.create_study(pruner=pruner, direction='${metricDirection()}')\n\ndef objective(trial):\n${optunaLines()}\n    # During iterative training:\n    # trial.report(validation_value, step)\n    # if trial.should_prune():\n    #     raise optuna.TrialPruned()\n    raise NotImplementedError('Return the validation metric after iterative training')\n\n# n_trials = ...  # derive from your experiment budget / stopping policy\n# study.optimize(objective, n_trials=n_trials)\n`
+    }
     return ''
   }
 
-  const sampleGrid = JSON.stringify(genParamMapping().grid, null, 2)
-
   const analysis = analyzeExperiment(exp)
   const recommended = (analysis.recommendedMethod?.name || '').toLowerCase()
-  // decide primary template
-  const primaryTemplate: 'optuna'|'grid' = recommended.includes('bayesian') || recommended.includes('optuna') ? 'optuna' : recommended.includes('grid') ? 'grid' : 'optuna'
+  const primaryTemplate: 'optuna'|'grid' = recommended.includes('bayesian') || recommended.includes('bohb') ? 'optuna' : recommended.includes('grid') ? 'grid' : 'optuna'
 
   return (
     <div className="card mt-4">
       <h3 className="text-lg font-semibold">Generate Starter Code</h3>
+      <div className="mt-1 text-xs text-slate-500">Implementation aid only. The generated templates do not choose scientific thresholds or claim performance.</div>
       <div className="mt-3">
-        <div className="text-sm text-slate-400">Parameter skeleton generated from your search space:</div>
-        <pre className="bg-transparent p-3 border border-slate-800 rounded text-sm mt-2">{sampleGrid}</pre>
-        <div className="mt-2 grid grid-cols-2 gap-2">
+        <div className="text-sm text-slate-400">Templates are generated from the declared search space. User-specific run count, CV splitter, and resource settings remain explicit placeholders.</div>
+        <div className="mt-3 grid grid-cols-2 gap-2">
           <button className={`${primaryTemplate==='grid' ? 'px-3 py-2 bg-cyan text-navy rounded' : 'px-3 py-2 bg-slate-800 text-slate-300 rounded'}`} onClick={()=>navigator.clipboard.writeText(generateTemplate('grid'))}>Copy GridSearchCV</button>
           <button className="px-3 py-2 bg-slate-800 text-slate-300 rounded" onClick={()=>navigator.clipboard.writeText(generateTemplate('random'))}>Copy RandomizedSearchCV</button>
           <button className={`${primaryTemplate==='optuna' ? 'px-3 py-2 bg-cyan text-navy rounded' : 'px-3 py-2 bg-slate-800 text-slate-300 rounded'}`} onClick={()=>navigator.clipboard.writeText(generateTemplate('optuna'))}>Copy Optuna Template</button>
           <button className="px-3 py-2 bg-slate-800 text-slate-300 rounded" onClick={()=>navigator.clipboard.writeText(generateTemplate('optuna_prune'))}>Copy Optuna Multi-Fidelity</button>
+          <button className="px-3 py-2 bg-slate-800 text-slate-300 rounded col-span-2" onClick={()=>navigator.clipboard.writeText(generateTemplate('halving'))}>Copy Successive Halving Starter</button>
         </div>
-        <div className="mt-2 text-sm text-slate-400">All templates include editable placeholders and comments.</div>
       </div>
     </div>
   )

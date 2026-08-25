@@ -25,13 +25,13 @@ export default function PresentationMode({ exp, analysis, onExit }:{ exp: Experi
     { title: 'Grid Feasibility', render: () => (
       <div>
         <div className="text-2xl font-bold">Grid Feasibility</div>
-        <div className="mt-3">{analysis.gridInfo.exactGridSizeAvailable ? 'Exact grid metrics available' : 'Exact grid size not available for conditional spaces'}</div>
+        <div className="mt-3">{analysis.gridInfo.exactGridSizeAvailable ? 'Exact finite-grid metrics available' : 'Exact finite-grid size unavailable until the space is explicitly enumerable/discretized'}</div>
       </div>
     )},
     { title: 'Recommended HPO Strategy', render: () => (
       <div>
         <div className="text-4xl font-bold">{analysis.recommendedMethod?.name || '—'}</div>
-        <div className="mt-2 text-xl">{analysis.recommendedMethod?.suitability}</div>
+        <div className="mt-2 text-xl">{analysis.recommendedMethod?.suitability}</div><div className="mt-2 text-sm text-slate-400">Literature-informed rule applicability; not a probability or accuracy score.</div>
       </div>
     )},
     { title: 'HPO Reasoning Path', render: () => (

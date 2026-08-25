@@ -2,39 +2,54 @@
 
 ### Design the Search Before You Run the Search
 
-HPO Architect is a rule-based decision-support tool for designing scientifically sound hyperparameter optimization experiments before compute resources are spent.
+**Live application:** https://hpo-architect.vercel.app  
+**GitHub repository:** https://github.com/Reemwaleed181/Hpo-architect
+
+HPO Architect is a **literature-informed, rule-based decision-support tool** for designing hyperparameter optimization experiments before compute resources are spent.
 
 It evaluates:
 
 - search-space structure
-- trial cost
-- compute budget
+- exact finite-grid feasibility when the grid is explicitly enumerable
+- full-trial cost and total compute budget
 - parallel resources
 - iterative training behavior
-- early-stopping capability
+- early-stopping / intermediate-metric capability
 - validation requirements
 
-It then recommends an appropriate HPO strategy with transparent reasoning.
+It then provides a primary HPO recommendation, applicable alternatives, transparent reasoning, references, and an experiment blueprint.
+
+> HPO Architect does **not** train the model, predict model accuracy, estimate the probability that one method is best, or guarantee a global optimum.
 
 ![HPO Architect](docs/screenshots/01-hero.png)
 
-## Why HPO Architect?
+## Scientific traceability
 
-Hyperparameter optimization is not only about choosing an algorithm. The appropriate strategy depends on the number and type of hyperparameters, whether the search space is finite or continuous, the cost of one trial, available compute, parallelism, early stopping, and validation design.
+The recommendation engine is implemented in `src/lib/hpo-engine.ts` and the reference registry is in `src/lib/references.ts`.
 
-HPO Architect helps design the search before running the search. It is a rule-based decision-support system, not a machine-learning model and not an AI performance predictor. It does not predict model accuracy or guarantee an optimal configuration.
+The previous arbitrary numerical scoring logic has been removed. There are no `+25 / -15` method scores and no scientific claim based on thresholds such as `trialTime >= 5`, `params > 20`, or `Strong Match >= 20`.
+
+The current engine translates published HPO principles and method prerequisites into explicit rules. Scientific evidence is surfaced in the Analysis, Recommendation, Reasoning Path and Blueprint views.
+
+See **[SCIENTIFIC_BASIS.md](SCIENTIFIC_BASIS.md)** for the complete rule-to-reference matrix and the distinction between literature-backed content and author-developed implementation choices.
+
+### About the Match labels
+
+`Strong Match`, `Reasonable Match`, and `Weak Match` are retained for continuity with the submitted presentation/UI. They are **author-developed qualitative applicability labels** describing how closely the entered experiment satisfies literature-supported conditions/prerequisites. They are not accuracy scores, probabilities, confidence values, performance estimates, or empirically calibrated rankings.
 
 ## Core Workflow
 
 ### 01 — Define
 
-Define the ML task, model family, objective metric, dataset characteristics, compute budget, and training behavior.
+Define the ML task, model family, objective metric, dataset characteristics, total compute budget, parallel resources, and training behavior.
 
 ![Experiment Designer](docs/screenshots/02-experiment-designer.png)
 
 ### 02 — Search Space
 
-Represent continuous, integer, discrete, categorical, and conditional parameters. Continuous dimensions retain their linear or logarithmic sampling scale, while Grid Search requires explicit discretization before an exact exhaustive size can be calculated.
+Represent continuous, integer, discrete, categorical, and conditional parameters. Grid Search requires an explicitly finite/discretized space before an exact exhaustive size can be calculated.
+
+Scientific basis: Feurer & Hutter (2019); Bischl et al. (2023).
 
 ![Search Space Builder](docs/screenshots/03-search-space.png)
 
@@ -42,33 +57,19 @@ Represent continuous, integer, discrete, categorical, and conditional parameters
 
 HPO Architect evaluates:
 
-- full-trial cost and affordable trial count
-- exhaustive Grid Search feasibility
-- search-space diagnostics
+- affordable full-trial equivalents (`total compute budget ÷ full-trial cost`)
+- exact Grid Search feasibility when the space is enumerable
+- search-space structural diagnostics
 - validation strategy
 - compute and parallel-resource constraints
+
+No arbitrary scientific threshold is used to classify a trial as “expensive” or a dataset as “small”.
 
 ![Experiment Analysis](docs/screenshots/04-analysis.png)
 
 ### 04 — Decide
 
-The system ranks applicable HPO strategies and reports the recommended method, suitability, reasons it fits, limitations, and alternatives.
-
-![HPO Recommendation](docs/screenshots/05-recommendation.png)
-
-## Transparent HPO Reasoning
-
-HPO Architect exposes the explicit rules that produced each recommendation:
-
-**Observation → Implication → Favored Strategy → Final Decision**
-
-The reasoning path renders the actual decision trace generated by the analysis engine. Recommendations come from explicit rule-based analysis rather than hidden model predictions.
-
-![HPO Reasoning Path](docs/screenshots/06-reasoning-path.png)
-
-## Strategy Comparison
-
-The current engine evaluates these strategy categories when their requirements apply:
+The system evaluates these HPO strategy categories:
 
 - Grid Search
 - Random Search
@@ -79,13 +80,29 @@ The current engine evaluates these strategy categories when their requirements a
 - Bayesian + Multi-Fidelity
 - BOHB
 
-Suitability is relative to the experiment definition. A method may be a strong choice in one compute and search-space regime and a weak choice in another.
+The recommendation is condition-based and literature-informed; applicable alternatives remain visible for empirical comparison.
+
+![HPO Recommendation](docs/screenshots/05-recommendation.png)
+
+## Transparent HPO Reasoning
+
+HPO Architect exposes the explicit decision trace:
+
+**Observation → Implication → Favored Strategy → Final Decision → Scientific Basis**
+
+Recommendations come from explicit rules rather than hidden model predictions or arbitrary numerical method scores.
+
+![HPO Reasoning Path](docs/screenshots/06-reasoning-path.png)
+
+## Strategy Comparison
+
+The comparison is **case-conditional, not a universal ranking**. The correct empirical winner can only be established by running candidate HPO methods under comparable dataset, validation and compute conditions.
 
 ![Strategy Comparison](docs/screenshots/07-decision-comparison.png)
 
 ## HPO Experiment Blueprint
 
-The final stage creates a structured experiment plan containing:
+The final stage creates an author-developed structured experiment plan containing:
 
 1. Experiment
 2. Search Space
@@ -96,6 +113,7 @@ The final stage creates a structured experiment plan containing:
 7. Reproducibility
 8. Execution Plan
 9. Warnings
+10. Scientific references used by the recommendation
 
 Blueprints can be copied or exported as TXT, JSON, or YAML, and can be printed or saved as PDF from the browser.
 
@@ -103,60 +121,59 @@ Blueprints can be copied or exported as TXT, JSON, or YAML, and can be printed o
 
 ## Implementation Starter
 
-The application provides starter templates for the current search workflows:
+The application provides starter templates for:
 
 - scikit-learn `GridSearchCV`
 - scikit-learn `RandomizedSearchCV`
-- Optuna optimization
+- Optuna model-based optimization
+- Successive Halving
 - Optuna pruning / multi-fidelity optimization
 
-Generated code is a starter template and must be adapted to the user's model, dataset, objective function, validation pipeline, and runtime environment. The templates are not production-ready implementations.
+Generated code is a starter only. Arbitrary defaults such as `n_trials=50`, `cv=3`, and `factor=3` have been removed; run count, validation splitters, and resource-reduction settings remain explicit user-defined placeholders.
 
 ## Educational Scenarios
+
+The scenario numbers below are **illustrative author-defined examples**, not published scientific thresholds.
 
 ### Small Random Forest
 
 - 2 hyperparameters
-- 6 Grid configurations
-- 2 min per trial
-- 4 workers
-- Expected recommendation: **Grid Search**
-
-> “When exhaustive search is cheap, simplicity can win.”
+- 6 explicitly finite Grid configurations
+- 2 min per full trial
+- 60 min total compute budget
+- Primary rule-based recommendation: **Grid Search** because the complete declared finite grid fits the budget.
 
 ### Expensive XGBoost
 
 - 3 search dimensions
-- 20 min per trial
-- 1 worker
-- continuous search dimensions
-- Expected recommendation: **Bayesian Optimization**
+- continuous dimensions without Grid discretization
+- 20 min per full trial
+- 180 min total compute budget
+- no iterative early stopping
+- Primary rule-based recommendation: **Bayesian Optimization** because exact exhaustive Grid Search is not defined without discretization and model-based sequential search is applicable to the continuous/integer space.
 
-> “When model evaluations become expensive, adaptive search becomes more valuable.”
+This preserves the recommendation used in the submitted PowerPoint/live-demo screenshots.
 
 ### Deep Neural Network
 
-- 3 search dimensions
-- 30 min per trial
-- 4 workers
+- continuous search dimensions
 - iterative training
-- early stopping
-- Expected recommendation: **Bayesian Optimization**
-
-> “Early stopping enables resource-aware methods, while expensive continuous search may still favor Bayesian Optimization.”
-
-Hyperband and Bayesian + Multi-Fidelity remain strong alternatives because intermediate metrics and early stopping are available.
+- intermediate metrics / early stopping
+- multiple workers
+- Primary literature-informed recommendation: **Bayesian Optimization** because continuous search dimensions make model-based sequential HPO applicable.
+- **Hyperband, ASHA, Bayesian + Multi-Fidelity, and BOHB remain applicable alternatives** because iterative training and early stopping are available. The preset does not assert that intermediate / low-fidelity rankings are reliable enough to make a multi-fidelity method the primary choice without empirical evidence.
+- Hyperband, ASHA and Bayesian Optimization remain applicable alternatives.
 
 ## Validation Integrity
 
-- Hyperparameters must be selected using validation data rather than the final test set.
-- The final test set should remain untouched during HPO and be used after model selection for final reporting.
-- Time-series problems require time-aware, forward-chaining validation.
-- Imbalanced classification may require stratified validation.
-- Smaller datasets may benefit from cross-validation, while large and expensive workloads may use a hold-out validation design.
-- Repeated tuning against the same validation data can cause validation overfitting.
+The advisor no longer uses a fixed sample threshold such as `samples < 2000`.
 
-The advisor recommends a validation structure from the experiment metadata; users remain responsible for leakage prevention and domain-specific evaluation design.
+- Time-series data → time-aware ordered validation.
+- Imbalanced classification → stratified validation is suggested as an evaluation design option.
+- Other cases → cross-validation or hold-out should be chosen for the data and compute context rather than by a fixed sample-count rule.
+- The final test set remains separate from HPO/model selection and is used for final reporting.
+
+Scientific basis: Cawley & Talbot (2010); Kohavi (1995); Bergmeir et al. (2018); Bischl et al. (2023).
 
 ## Training Optimizer vs HPO Strategy
 
@@ -167,11 +184,9 @@ The advisor recommends a validation structure from the experiment metadata; user
 | Typical targets | Weights and biases | Learning rate, batch size, depth, dropout |
 | Operates | During one model-training run | Across multiple model configurations |
 
-Training optimizers and HPO strategies solve different problems and should not be used interchangeably.
-
 ## Presentation Mode
 
-Presentation Mode provides a simplified classroom and demonstration view with larger typography and focused slides for:
+Presentation Mode keeps the same demonstration workflow used in the project presentation:
 
 - experiment summary
 - search space and compute analysis
@@ -208,14 +223,16 @@ The application is frontend-only and stores saved experiments in browser `localS
 
 ## Running Locally
 
+`node_modules` is intentionally **not included** in the repository/archive.
+
 ```bash
-git clone <repository-url>
-cd HPO
+git clone https://github.com/Reemwaleed181/Hpo-architect.git
+cd Hpo-architect
 npm install
 npm run dev
 ```
 
-Create and inspect a production build with:
+Production build:
 
 ```bash
 npm run build
@@ -224,10 +241,24 @@ npm run preview
 
 ## Vercel Deployment
 
-HPO Architect is a static Vite application and does not require a backend service.
+The existing Vercel/GitHub deployment structure is preserved.
 
 - Framework preset: `Vite`
 - Build command: `npm run build`
 - Output directory: `dist`
+- Live URL: https://hpo-architect.vercel.app
+- Repository: https://github.com/Reemwaleed181/Hpo-architect
 
-Connect the repository to Vercel and deploy using those settings. `node_modules/`, generated build output, environment files, logs, and editor artifacts are excluded from Git.
+Vercel installs dependencies during deployment; a local `node_modules` folder is not required in GitHub.
+
+## Core Scientific References
+
+- Feurer, M., & Hutter, F. (2019). *Hyperparameter Optimization*. Springer. https://doi.org/10.1007/978-3-030-05318-5_1
+- Bischl, B., et al. (2023). *Hyperparameter optimization: Foundations, algorithms, best practices, and open challenges*. WIREs Data Mining and Knowledge Discovery, 13(2), e1484. https://doi.org/10.1002/widm.1484
+- Bergstra, J., & Bengio, Y. (2012). Random search for hyper-parameter optimization. JMLR, 13, 281–305. https://www.jmlr.org/papers/v13/bergstra12a.html
+- Snoek, J., Larochelle, H., & Adams, R. P. (2012). Practical Bayesian Optimization of Machine Learning Algorithms. NeurIPS 25. https://papers.nips.cc/paper_files/paper/2012/hash/05311655a15b75fab86956663e1819cd-Abstract.html
+- Jamieson, K., & Talwalkar, A. (2016). Non-stochastic best arm identification and hyperparameter optimization. AISTATS / PMLR 51. https://proceedings.mlr.press/v51/jamieson16.html
+- Li, L., et al. (2018). Hyperband. JMLR, 18(185), 1–52. https://www.jmlr.org/papers/v18/16-558.html
+- Li, L., et al. (2020). A System for Massively Parallel Hyperparameter Tuning. MLSys 2020. https://proceedings.mlsys.org/paper_files/paper/2020/hash/a06f20b349c6cf09a6b171c71b88bbfc-Abstract.html
+- Falkner, S., Klein, A., & Hutter, F. (2018). BOHB. ICML / PMLR 80. https://proceedings.mlr.press/v80/falkner18a.html
+- Cawley, G. C., & Talbot, N. L. C. (2010). On Over-fitting in Model Selection and Subsequent Selection Bias in Performance Evaluation. JMLR, 11, 2079–2107. https://www.jmlr.org/papers/v11/cawley10a.html

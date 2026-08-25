@@ -1,5 +1,6 @@
 import { Hyperparam } from '../lib/hpo-engine'
 import Card from './ui/Card'
+import ScientificEvidence from './ScientificEvidence'
 
 export default function SearchSpaceBuilder({ params, onChange }:{ params: Hyperparam[], onChange:(p:Hyperparam[])=>void }){
   function addParam(){
@@ -89,6 +90,7 @@ export default function SearchSpaceBuilder({ params, onChange }:{ params: Hyperp
           <button className="px-3 py-2 bg-cyan text-navy rounded" onClick={addParam}>Add Hyperparameter</button>
         </div>
       </div>
+      <ScientificEvidence referenceIds={['feurer2019','bischl2023']} compact />
     </Card>
   )
 }

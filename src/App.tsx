@@ -24,8 +24,8 @@ const PRESETS: Experiment[] = [
 
 const PRESET_LEARNING_POINTS: Partial<Record<string, { primary: string, secondary?: string }>> = {
   'Deep Neural Network': {
-    primary: 'Early stopping enables resource-aware methods, while expensive continuous search may still favor Bayesian Optimization.',
-    secondary: 'Hyperband and Bayesian + Multi-Fidelity remain strong alternatives because intermediate metrics and early stopping are available.',
+    primary: 'Continuous search dimensions support model-based sequential HPO, while iterative training and early stopping also make resource-aware alternatives applicable.',
+    secondary: 'Bayesian Optimization remains the primary recommendation because the current experiment metadata does not establish that intermediate / low-fidelity rankings are sufficiently reliable to prefer a multi-fidelity method. Hyperband, ASHA, Bayesian + Multi-Fidelity, and BOHB remain applicable alternatives for empirical comparison.',
   },
 }
 
@@ -54,7 +54,7 @@ export default function App() {
   // Compute single analysis once per experiment state
   const analysis = useMemo(() => analyzeExperiment(exp), [exp])
   const methods = analysis.rankedMethods
-  const main = analysis.recommendedMethod || { name: '—', suitability: 'Weak Match', whyFits: [], whyNot: [] }
+  const main = analysis.recommendedMethod || { name: '—', suitability: 'Weak Match' as const, whyFits: [], whyNot: [], referenceIds: [] }
 
   return (
     <div className="min-h-screen flex flex-col">
